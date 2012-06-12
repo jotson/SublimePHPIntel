@@ -1,0 +1,3 @@
+[submodule "phpparser"]
+	path = phpparser
+	url = git@github.com:jotson/PHPParser
