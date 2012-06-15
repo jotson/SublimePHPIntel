@@ -1,0 +1,6 @@
+[
+    {
+        "caption": "PHPIntel: Scan Project",
+        "command": "scan_project"
+    }
+]

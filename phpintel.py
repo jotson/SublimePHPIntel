@@ -68,6 +68,9 @@ class EventListener(sublime_plugin.EventListener):
                         intel = parser.load(intel_file_name)
 
             def get_class(context):
+                if len(context) == 0:
+                    return None, None
+
                 if len(context) == 1:
                     for i in intel:
                         if i['class'] == context[0]:
@@ -110,7 +113,7 @@ class EventListener(sublime_plugin.EventListener):
                         args = i['args']
                         argnames = []
                         for j in range(0, len(args)):
-                            argname, argtype = args[j].split('|', 1)
+                            argname, argtype = args[j]
                             argnames.append(argname)
                             args[j] = '${' + str(j + 1) + ':' + argname.replace('$', '\\$') + '}'
                     snippet = '{name}({args})'.format(name=i['name'], args=', '.join(args))
@@ -163,16 +166,18 @@ class ScanThread(threading.Thread):
             # Scan entire project
             self.progress.start()
             for f in sublime.active_window().folders():
-                defs = []
+                declarations = []
                 for root, dirs, files in os.walk(f):
-                    self.set_progress_message('Scanning ' + root)
                     for name in files:
                         filename, ext = os.path.splitext(name)
                         if ext == '.php':
                             path = os.path.join(root, name)
-                            defs.append(parser.scan_file(path))
-                            # FIXME Is this needed? time.sleep(0.010)
-                parser.save(defs, os.path.join(f, '.phpintel'))
+                            self.set_progress_message('Scanning ' + path)
+                            d = parser.scan_file(path)
+                            if d:
+                                declarations.extend(d)
+                            time.sleep(0.010)
+                parser.save(declarations, os.path.join(f, '.phpintel'))
 
     def set_progress_message(self, message):
         self.progress.message = message
