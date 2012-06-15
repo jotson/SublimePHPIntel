@@ -32,7 +32,6 @@ from phpparser.phpparser import PHPParser
 
 # TODO Handle $var = new ClassName()
 # TODO Jump to definition
-# TODO Include parent class definitions
 
 
 class ScanProjectCommand(sublime_plugin.WindowCommand):
@@ -88,19 +87,27 @@ class EventListener(sublime_plugin.EventListener):
             context_class, context_partial = get_class(context)
             #print '>>>', context_class, context_partial
             if context_class:
-                for i in intel:
-                    if i['class'] == context_class:
-                        if i['name'] and i['name'].startswith(context_partial):
-                            match_visibility = 'public'
-                            match_static = 0
-                            if context[0] == '$this' and len(context) == 2:
-                                match_visibility = 'all'
-                                match_static = 0
-                            if operator == '::':
+                def find_completions(context_class, context_partial, found, parsed=[]):
+                    for i in intel:
+                        if i['class'] == context_class:
+                            if i['class'] in parsed:
+                                return
+                            if i['name'] and i['name'].startswith(context_partial):
                                 match_visibility = 'public'
-                                match_static = 1
-                            if int(i['static']) == int(match_static) and i['visibility'] == match_visibility:
-                                found.append(i)
+                                match_static = 0
+                                if context[0] == '$this' and len(context) == 2:
+                                    match_visibility = 'all'
+                                    match_static = 0
+                                if operator == '::':
+                                    match_visibility = 'public'
+                                    match_static = 1
+                                if int(i['static']) == int(match_static) and i['visibility'] == match_visibility:
+                                    found.append(i)
+                            if i['extends']:
+                                find_completions(i['extends'], context_partial, found, parsed)
+                    parsed.append(context_class)
+
+                find_completions(context_class, context_partial, found)
 
         if found:
             for i in found:
