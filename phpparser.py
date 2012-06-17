@@ -140,9 +140,13 @@ def get_context(source, point):
             nest += 1
         if kind == None and stmt == ')':
             nest -= 1
+        if kind == None and stmt == '=':
+            break
         if kind == None and stmt == ';':
             break
         if kind == None and (stmt == '{' or stmt == '}'):
+            break
+        if kind == 'T_NEW':
             break
         if nest == 0 and kind == 'T_VARIABLE':
             context.append(stmt)
@@ -294,8 +298,7 @@ def convert_raw_tokens(raw_tokens):
                 data = re.findall('@param\s+([\w|\||\$]*?)\s+\$' + v + '[\s|$]', doc)
                 if data:
                     vtype = data[0]
-            if vtype:
-                args.append([stmt, vtype])
+            args.append([stmt, vtype])
         elif t == 'T_CLASS':
             in_class = True
             class_name = search_ahead(n, 'T_STRING')

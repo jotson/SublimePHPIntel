@@ -33,6 +33,14 @@ import pickle
 from os.path import realpath
 
 _index = {}
+_roots = []
+
+
+def reset():
+    global _index
+    global _roots
+    _index = {}
+    _roots = []
 
 
 def get_intel_folder(root):
@@ -42,6 +50,7 @@ def get_intel_folder(root):
     folder = os.path.join(root, '.phpintel')
     if not os.path.exists(folder):
         os.mkdir(folder)
+
     return folder
 
 
@@ -58,6 +67,8 @@ def get_intel_path(root, filename):
 
 
 def update_index(filename, *classes):
+    global _index
+
     if _index == None:
         load_index()
 
@@ -76,20 +87,102 @@ def update_index(filename, *classes):
 
 def load_index(root):
     '''
-    Return the index object
+    Load the index located in root
     '''
-    global _index
-    _index = {}
+    global _index, _roots
+
     folder = get_intel_folder(root)
     index_filename = os.path.join(folder, 'index')
     if folder and os.path.exists(index_filename):
         with open(index_filename, 'rb') as f:
-            _index = pickle.load(f)
+            t = pickle.load(f)
+            if '__global__' in _index:
+                if '__global__' in t:
+                    t['__global__'].extend(_index['__global__'])
+                else:
+                    t['__global__'] = _index['__global__']
+                t['__global__'] = list(set(t['__global__']))
+            _index.update(t)
+
+            if root not in _roots:
+                _roots.append(root)
+
+
+def get_class(context):
+    if len(context) == 0:
+        return None, None
+
+    if len(context) == 1:
+        if context[0] in _index.keys():
+            return context[0], ''
+
+        return '__global__', context[0]
+
+    intel = get_intel(context[0])
+
+    for i in intel:
+        if i['name'] == context[1] or i['name'] == '$' + context[1]:
+            context[1] = i['returns']
+            return get_class(context[1:])
+
+    return context[0], context[1]
+
+
+def get_intel(class_name):
+    intel = []
+    if class_name in _index:
+        for filename in _index[class_name]:
+            for root in _roots:
+                intel = load(root, filename)
+                if intel:
+                    break
+            if intel:
+                break
+
+    return intel
+
+
+def find_completions(context, operator, context_class, context_partial, found, parsed=[]):
+    # Match class names
+    if context_class == '__global__':
+        for i in _index:
+            if i.lower().startswith(context_partial.lower()):
+                found.append(
+                    {
+                        'class': i,
+                        'name': i,
+                        'kind': 'class',
+                        'args': [],
+                        'returns': i
+                    }
+                )
+
+    # Match member names
+    if context_class in _index:
+        intel = get_intel(context_class)
+        for i in intel:
+            if i['class'] in parsed:
+                return
+            if i['name'] and i['name'].lower().startswith(context_partial.lower()):
+                match_visibility = 'public'
+                match_static = 0
+                if context[0] == '$this' and len(context) == 2:
+                    match_visibility = 'all'
+                    match_static = 0
+                if operator == '::':
+                    match_visibility = 'public'
+                    match_static = 1
+                if int(i['static']) == int(match_static) and i['visibility'] == match_visibility:
+                    found.append(i)
+            if i['extends']:
+                find_completions(context, operator, i['extends'], context_partial, found, parsed)
+
+    parsed.append(context_class)
 
 
 def save_index(root):
     '''
-    Save the index object
+    Save the index to root
     '''
     folder = get_intel_folder(root)
     index_filename = os.path.join(folder, 'index')
@@ -98,16 +191,24 @@ def save_index(root):
             pickle.dump(_index, f, pickle.HIGHEST_PROTOCOL)
     
 
-def save(declarations, filename):
-    with open(filename, 'wb') as f:
-        pickle.dump(declarations, f, pickle.HIGHEST_PROTOCOL)
+def save(declarations, root, filename):
+    '''
+    Save declarations for filename to root
+    '''
+    intel_filename = get_intel_path(root, filename)
+    with open(intel_filename, 'wb') as f:
+        pickle.dump(declarations, f)
 
 
-def load(filename):
+def load(root, filename):
+    '''
+    Load declarations for filename in root
+    '''
     declarations = []
     
-    if os.path.exists(filename):
-        with open(filename, 'rb') as f:
+    intel_filename = get_intel_path(root, filename)
+    if os.path.exists(intel_filename):
+        with open(intel_filename, 'rb') as f:
             declarations = pickle.load(f)
 
     return declarations
