@@ -127,15 +127,13 @@ class EventListener(sublime_plugin.EventListener):
 class ScanThread(threading.Thread):
     def __init__(self, file=None):
         self.file = file
-        if file:
-            msg = 'Scanning ' + file + '...'
-        else:
-            msg = 'Scanning project...'
-        self.progress = ThreadProgress(self, msg, 'Scan complete')
         threading.Thread.__init__(self)
 
     def run(self):
+        self.progress = ThreadProgress(self, '', '')
         self.progress.start()
+        start_time = time.time()
+        scanned_something = False
 
         if self.file:
             # Scan one file
@@ -143,20 +141,22 @@ class ScanThread(threading.Thread):
                 path = realpath(self.file)
                 for f in sublime.active_window().folders():
                     if path.startswith(realpath(f)):
+                        self.progress.message = 'Scanning ' + path
+                        scanned_something = True
                         d = phpparser.scan_file(path)
                         intel.save(d, f, path)
                         intel.update_index(path, *set([x['class'] for x in d]))
                         intel.save_index(f)
                         break
-
         else:
             # Scan entire project
             for f in sublime.active_window().folders():
                 for root, dirs, files in os.walk(f, followlinks=True):
                     for name in files:
                         if os.path.splitext(name)[1] == '.php':
+                            scanned_something = True
                             path = os.path.join(root, name)
-                            self.set_progress_message('Scanning ' + path)
+                            self.progress.message = 'Scanning ' + path
                             d = phpparser.scan_file(path)
                             if d:
                                 intel.save(d, f, path)
@@ -164,8 +164,13 @@ class ScanThread(threading.Thread):
                             time.sleep(0.010)
                 intel.save_index(f)
 
-    def set_progress_message(self, message):
-        self.progress.message = message
+        if scanned_something:
+            elapsed_s = time.time() - start_time
+            if elapsed_s > 120:
+                elapsed = '{min:d}m{sec:d}s'.format(min=int(elapsed_s / 60), sec=elapsed_s % 60)
+            else:
+                elapsed = '{sec:.2f}s'.format(sec=elapsed_s)
+            self.progress.success_message = 'Scan completed in {elapsed}'.format(elapsed=elapsed)
 
 
 class ThreadProgress(threading.Thread):
@@ -184,15 +189,14 @@ class ThreadProgress(threading.Thread):
     def run(self):
         while True:
             if not self.thread.is_alive():
-                if hasattr(self.thread, 'result') and not self.thread.result:
-                    self.update_status('')
-                    break
-                self.update_status(self.success_message)
+                if self.success_message:
+                    self.update_status(self.success_message)
                 break
 
             before = self.i % self.size
             after = (self.size - 1) - before
-            self.update_status('[{before}={after}] {message}'.format(message=self.message, before=' ' * before, after=' ' * after))
+            if self.message:
+                self.update_status('[{before}={after}] {message}'.format(message=self.message, before=' ' * before, after=' ' * after))
             if not after:
                 self.addend = -1
             if not before:
