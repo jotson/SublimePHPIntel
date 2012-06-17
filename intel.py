@@ -49,7 +49,7 @@ def get_intel_folder(root):
     '''
     folder = os.path.join(root, '.phpintel')
     if not os.path.exists(folder):
-        os.mkdir(folder)
+        os.makedirs(folder)
 
     return folder
 

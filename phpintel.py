@@ -76,8 +76,7 @@ class EventListener(sublime_plugin.EventListener):
             # Iterate context and find completion at this point
             if context:
                 for f in sublime.active_window().folders():
-                    if realpath(view.file_name()).startswith(realpath(f)):
-                        intel.load_index(f)
+                    intel.load_index(f)
 
             if not intel:
                 return False
@@ -163,11 +162,12 @@ class ScanThread(threading.Thread):
                                 intel.update_index(path, *set([x['class'] for x in d]))
                             time.sleep(0.010)
                 intel.save_index(f)
+                intel.reset()
 
         if scanned_something:
             elapsed_s = time.time() - start_time
             if elapsed_s > 120:
-                elapsed = '{min:d}m{sec:d}s'.format(min=int(elapsed_s / 60), sec=elapsed_s % 60)
+                elapsed = '{min:d}m{sec:d}s'.format(min=int(elapsed_s / 60), sec=int(elapsed_s % 60))
             else:
                 elapsed = '{sec:.2f}s'.format(sec=elapsed_s)
             self.progress.success_message = 'Scan completed in {elapsed}'.format(elapsed=elapsed)
