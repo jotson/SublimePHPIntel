@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 '''
 SublimePHPIntel for Sublime Text 2
 Copyright 2012 John Watson <https://github.com/jotson>
@@ -28,7 +26,9 @@ import threading
 import time
 import sublime
 import sublime_plugin
-from phpparser.phpparser import PHPParser
+from os.path import realpath
+import phpparser
+import intel
 
 '''
 TODO Optimization
@@ -39,6 +39,10 @@ TODO Optimization
         could be accomplished by saving data for each class in its own file.
         In contrast, scanning all of the completions once they are in memory
         takes almost no time at all (<100ms).
+
+        Strategy:
+            Completions stored per file
+            Index of class => file
 
      2. phpparser.get_context() is slow (about 400ms). It's entirely because of
         the process call to the PHP executable. Writing and unlinking the tmp
@@ -81,21 +85,23 @@ class EventListener(sublime_plugin.EventListener):
         found = []
 
         if self.has_intel():
-            parser = PHPParser()
-
             # Find context
             point = view.sel()[0].a
             source = view.substr(sublime.Region(0, view.size()))
-            context = parser.get_context(source, point)
+            context = phpparser.get_context(source, point)
             operator = view.substr(sublime.Region(point - 2, point))
 
             # Iterate context and find completion at this point
-            intel = []
             if context:
                 for f in sublime.active_window().folders():
-                    intel_filename = os.path.join(f, '.phpintel')
-                    if os.path.realpath(view.file_name()).startswith(os.path.realpath(f)) and os.path.exists(intel_filename):
-                        intel = parser.load(intel_filename)
+                    if realpath(view.file_name()).startswith(realpath(f)):
+                        intel.load_index(f)
+
+            print intel.index
+            return False
+
+            if not intel:
+                return False
 
             def get_class(context):
                 if len(context) == 0:
@@ -184,42 +190,36 @@ class ScanThread(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        parser = PHPParser()
+        self.progress.start()
 
         if self.file:
             # Scan one file
             if os.path.splitext(self.file)[1] == '.php':
-                file = os.path.realpath(self.file)
+                path = realpath(self.file)
                 for f in sublime.active_window().folders():
-                    f = os.path.realpath(f)
-                    intel_filename = os.path.join(f, '.phpintel')
-                    if os.path.realpath(file).startswith(os.path.realpath(f)) and os.path.exists(intel_filename):
-                        self.progress.start()
-                        old_data = parser.load(intel_filename)
-                        new_data = parser.scan_file(file)
-                        for i in old_data:
-                            if i['path'] != file:
-                                new_data.append(i)
-                        parser.save(new_data, intel_filename)
+                    if path.startswith(realpath(f)):
+                        d = phpparser.scan_file(path)
+                        intel_filename = intel.get_intel_path(f, path)
+                        intel.save(d, intel_filename)
+                        intel.update_index(path, *set([x['class'] for x in d]))
+                        intel.save_index(f)
                         break
 
         else:
             # Scan entire project
-            self.progress.start()
             for f in sublime.active_window().folders():
-                declarations = []
                 for root, dirs, files in os.walk(f, followlinks=True):
                     for name in files:
-                        filename, ext = os.path.splitext(name)
-                        if ext == '.php':
+                        if os.path.splitext(name)[1] == '.php':
                             path = os.path.join(root, name)
                             self.set_progress_message('Scanning ' + path)
-                            d = parser.scan_file(path)
+                            d = phpparser.scan_file(path)
                             if d:
-                                declarations.extend(d)
+                                intel_filename = intel.get_intel_path(f, path)
+                                intel.save(d, intel_filename)
+                                intel.update_index(path, *set([x['class'] for x in d]))
                             time.sleep(0.010)
-                intel_filename = os.path.join(f, '.phpintel')
-                parser.save(declarations, intel_filename)
+                intel.save_index(f)
 
     def set_progress_message(self, message):
         self.progress.message = message
