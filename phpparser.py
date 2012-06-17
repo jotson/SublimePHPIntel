@@ -302,6 +302,8 @@ def convert_raw_tokens(raw_tokens):
         elif t == 'T_CLASS':
             in_class = True
             class_name = search_ahead(n, 'T_STRING')
+        elif t == 'T_INTERFACE':
+            class_name = search_ahead(n, 'T_STRING')
         elif t == 'T_EXTENDS':
             extends = search_ahead(n, 'T_STRING')
         elif t == 'T_IMPLEMENTS':

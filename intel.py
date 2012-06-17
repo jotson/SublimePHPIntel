@@ -130,19 +130,19 @@ def get_class(context):
 
 def get_intel(class_name):
     intel = []
+
     if class_name in _index:
         for filename in _index[class_name]:
             for root in _roots:
-                intel = load(root, filename)
-                if intel:
-                    break
-            if intel:
-                break
+                intel.extend(load(root, filename))
 
     return intel
 
 
 def find_completions(context, operator, context_class, context_partial, found, parsed=[]):
+    if context_class in parsed:
+        return
+        
     # Match class names
     if context_class == '__global__':
         for i in _index:
@@ -161,8 +161,10 @@ def find_completions(context, operator, context_class, context_partial, found, p
     if context_class in _index:
         intel = get_intel(context_class)
         for i in intel:
-            if i['class'] in parsed:
-                return
+            if not context_class in parsed:
+                parsed.append(context_class)
+                if i['extends']:
+                    find_completions(context, operator, i['extends'], context_partial, found, parsed)
             if i['name'] and i['name'].lower().startswith(context_partial.lower()):
                 match_visibility = 'public'
                 match_static = 0
@@ -174,10 +176,6 @@ def find_completions(context, operator, context_class, context_partial, found, p
                     match_static = 1
                 if int(i['static']) == int(match_static) and i['visibility'] == match_visibility:
                     found.append(i)
-            if i['extends']:
-                find_completions(context, operator, i['extends'], context_partial, found, parsed)
-
-    parsed.append(context_class)
 
 
 def save_index(root):

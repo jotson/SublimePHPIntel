@@ -77,7 +77,7 @@ class EventListener(sublime_plugin.EventListener):
                 return False
 
             context_class, context_partial = intel.get_class(context)
-            print '>>>', context_class, context_partial, str(time.time())
+            #print '>>>', context, context_class, context_partial, str(time.time())
 
             if context_class:
                 intel.find_completions(context, operator, context_class, context_partial, found, [])
@@ -162,6 +162,7 @@ class ScanThread(threading.Thread):
             if filename == '__all__':
                 # Scan entire project
                 for f in sublime.active_window().folders():
+                    intel.reset()
                     for root, dirs, files in os.walk(f, followlinks=True):
                         for name in files:
                             if os.path.splitext(name)[1] == '.php':
@@ -174,7 +175,6 @@ class ScanThread(threading.Thread):
                                     intel.update_index(path, *set([x['class'] for x in d]))
                                 time.sleep(0.010)
                     intel.save_index(f)
-                    intel.reset()
             elif filename:
                 # Scan one file
                 if os.path.splitext(filename)[1] == '.php':
@@ -185,6 +185,8 @@ class ScanThread(threading.Thread):
                             scanned_something = True
                             d = phpparser.scan_file(path)
                             intel.save(d, f, path)
+                            intel.reset()
+                            intel.load_index(f)
                             intel.update_index(path, *set([x['class'] for x in d]))
                             intel.save_index(f)
                             break
