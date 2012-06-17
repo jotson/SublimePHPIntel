@@ -119,11 +119,17 @@ def get_class(context):
         return '__global__', context[0]
 
     intel = get_intel(context[0])
-
     for i in intel:
         if i['name'] == context[1] or i['name'] == '$' + context[1]:
-            context[1] = i['returns']
-            return get_class(context[1:])
+            if i['returns']:
+                context[1] = i['returns']
+                return get_class(context[1:])
+
+    # Nothing was found so search parent classes
+    for i in intel:
+        if i['class'] == context[0] and i['extends']:
+            context[0] = i['extends']
+            return get_class(context)
 
     return context[0], context[1]
 
@@ -142,7 +148,7 @@ def get_intel(class_name):
 def find_completions(context, operator, context_class, context_partial, found, parsed=[]):
     if context_class in parsed:
         return
-        
+
     # Match class names
     if context_class == '__global__':
         for i in _index:

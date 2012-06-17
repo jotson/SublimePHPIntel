@@ -24,6 +24,7 @@ SOFTWARE.
 import os
 import threading
 import time
+import re
 import sublime
 import sublime_plugin
 from os.path import realpath
@@ -34,8 +35,6 @@ import intel
 TODO Document::model()-> doesn't seem to be working in Yii projects
 
 TODO Detect variable assignment. e.g. $var = <code> where code returns an object
-
-TODO Jump to definition
 
 TODO Custom regex patterns for matching special cases, like factory methods.
      Mage::getModel('catalog/product'): e.g. {'Mage::getModel\('(.*?)/(.*?)'\)':
@@ -48,6 +47,38 @@ TODO Detect when new files are added/removed and rescan
 class ScanProjectCommand(sublime_plugin.WindowCommand):
     def run(self):
         start_scan()
+
+
+class GotoDeclarationCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        intel.reset()
+
+        view = self.view
+        class_name = view.substr(expand_word(view, view.sel()[0]))
+        path = None
+        if class_name:
+            for f in sublime.active_window().folders():
+                intel.load_index(f)
+            if class_name in intel._index:
+                # TODO What to do when a class is defined more than once?
+                path = intel._index[class_name].pop()
+                self.view.window().open_file(path, sublime.TRANSIENT)
+        else:
+            sublime.status_message('Select a class name first')
+
+
+def expand_word(view, region):
+    '''
+    Expand the region to hold the entire word it is within
+    '''
+    start = region.a
+    end = region.b
+    while re.match('[\w|_]', view.substr(start - 1)):
+        start -= 1
+    while re.match('[\w|_]', view.substr(end)):
+        end += 1
+
+    return sublime.Region(start, end)
 
 
 class EventListener(sublime_plugin.EventListener):
@@ -93,16 +124,17 @@ class EventListener(sublime_plugin.EventListener):
                     snippet = i['name']
                     data.append(tuple([str(i['name']) + '\t' + str(i['returns']), str(snippet)]))
                 if i['kind'] == 'func':
-                    args = []
+                    a = []
                     if len(i['args']):
                         args = i['args']
                         argnames = []
                         for j in range(0, len(args)):
                             argname, argtype = args[j]
                             argnames.append(argname)
-                            args[j] = '${' + str(j + 1) + ':' + argname.replace('$', '\\$') + '}'
-                    snippet = '{name}({args})'.format(name=i['name'], args=', '.join(args))
-                    data.append(tuple([str(i['name']) + '(' + ', '.join(argnames) + ')\t' + str(i['returns']), str(snippet)]))
+                            a.append('${' + str(j + 1) + ':' + argname.replace('$', '\\$') + '}')
+                    snippet = '{name}({args})'.format(name=i['name'], args=', '.join(a))
+                    returns = '\t' + i['returns'] if i['returns'] else ''
+                    data.append(tuple([str(i['name']) + '(' + ', '.join(argnames) + ')' + returns, str(snippet)]))
 
         if data:
             # Remove duplicates and sort

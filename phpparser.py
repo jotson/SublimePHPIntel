@@ -135,7 +135,6 @@ def get_context(source, point):
     end = 0
     for t in tokens:
         kind, stmt, line = t
-
         if kind == None and stmt == '(':
             nest += 1
         if kind == None and stmt == ')':
