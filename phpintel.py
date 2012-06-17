@@ -30,8 +30,39 @@ import sublime
 import sublime_plugin
 from phpparser.phpparser import PHPParser
 
-# TODO Handle $var = new ClassName()
-# TODO Jump to definition
+'''
+TODO Optimization
+     Based on profiling, there are two big targets for optimization:
+
+     1. Loading and decoding the entire completion file is very time consuming.
+        It would be better if we only loaded the data we needed. I think this
+        could be accomplished by saving data for each class in its own file.
+        In contrast, scanning all of the completions once they are in memory
+        takes almost no time at all (<100ms).
+
+     2. phpparser.get_context() is slow (about 400ms). It's entirely because of
+        the process call to the PHP executable. Writing and unlinking the tmp
+        file takes almost no time at all.
+
+TODO phparser.py: Scan method arguments and combine with param data
+     The above may fix an issue with duplicate declarations appearing in Yii sites
+     because of yiilite.php
+
+TODO Document::model()-> doesn't seem to be working in Yii projects
+
+TODO Detect variable assignment. e.g. $var = <code> where code returns an object
+
+TODO Jump to definition
+
+TODO Custom regex patterns for matching special cases, like factory methods.
+     Mage::getModel('catalog/product'): e.g. {'Mage::getModel\('(.*?)/(.*?)'\)':
+     'class': 'Mage_{1}_Model_{2}', 'cap_first': true}
+
+TODO Detect when new files are added/removed and rescan
+
+TODO Handle case when scan started while a scan is already in progress. Scan
+queues, perhaps.
+'''
 
 
 class ScanProjectCommand(sublime_plugin.WindowCommand):
@@ -62,9 +93,9 @@ class EventListener(sublime_plugin.EventListener):
             intel = []
             if context:
                 for f in sublime.active_window().folders():
-                    intel_file_name = os.path.join(f, '.phpintel')
-                    if os.path.exists(intel_file_name):
-                        intel = parser.load(intel_file_name)
+                    intel_filename = os.path.join(f, '.phpintel')
+                    if os.path.realpath(view.file_name()).startswith(os.path.realpath(f)) and os.path.exists(intel_filename):
+                        intel = parser.load(intel_filename)
 
             def get_class(context):
                 if len(context) == 0:
@@ -85,7 +116,7 @@ class EventListener(sublime_plugin.EventListener):
                 return context[0], context[1]
 
             context_class, context_partial = get_class(context)
-            #print '>>>', context_class, context_partial
+            print '>>>', context_class, context_partial, str(time.time())
             if context_class:
                 def find_completions(context_class, context_partial, found, parsed=[]):
                     for i in intel:
@@ -112,8 +143,10 @@ class EventListener(sublime_plugin.EventListener):
         if found:
             for i in found:
                 snippet = None
+                argnames = []
                 if i['kind'] == 'var':
                     snippet = i['name'].replace('$', '')
+                    data.append(tuple([str(i['name']) + '\t' + str(i['returns']), str(snippet)]))
                 if i['kind'] == 'func':
                     args = []
                     if len(i['args']):
@@ -124,7 +157,7 @@ class EventListener(sublime_plugin.EventListener):
                             argnames.append(argname)
                             args[j] = '${' + str(j + 1) + ':' + argname.replace('$', '\\$') + '}'
                     snippet = '{name}({args})'.format(name=i['name'], args=', '.join(args))
-                data.append(tuple([str(i['name']) + '\t' + str(i['returns']), str(snippet)]))
+                    data.append(tuple([str(i['name']) + '(' + ', '.join(argnames) + ')\t' + str(i['returns']), str(snippet)]))
 
         if data:
             # Remove duplicates and sort
@@ -155,26 +188,27 @@ class ScanThread(threading.Thread):
 
         if self.file:
             # Scan one file
-            file = os.path.realpath(self.file)
-            for f in sublime.active_window().folders():
-                f = os.path.realpath(f)
-                intel_file_name = os.path.join(f, '.phpintel')
-                if os.path.dirname(file).startswith(f) and os.path.exists(intel_file_name):
-                    self.progress.start()
-                    old_data = parser.load(intel_file_name)
-                    new_data = parser.scan_file(file)
-                    for i in old_data:
-                        if i['path'] != file:
-                            new_data.append(i)
-                    parser.save(new_data, intel_file_name)
-                    break
+            if os.path.splitext(self.file)[1] == '.php':
+                file = os.path.realpath(self.file)
+                for f in sublime.active_window().folders():
+                    f = os.path.realpath(f)
+                    intel_filename = os.path.join(f, '.phpintel')
+                    if os.path.realpath(file).startswith(os.path.realpath(f)) and os.path.exists(intel_filename):
+                        self.progress.start()
+                        old_data = parser.load(intel_filename)
+                        new_data = parser.scan_file(file)
+                        for i in old_data:
+                            if i['path'] != file:
+                                new_data.append(i)
+                        parser.save(new_data, intel_filename)
+                        break
 
         else:
             # Scan entire project
             self.progress.start()
             for f in sublime.active_window().folders():
                 declarations = []
-                for root, dirs, files in os.walk(f):
+                for root, dirs, files in os.walk(f, followlinks=True):
                     for name in files:
                         filename, ext = os.path.splitext(name)
                         if ext == '.php':
@@ -184,7 +218,8 @@ class ScanThread(threading.Thread):
                             if d:
                                 declarations.extend(d)
                             time.sleep(0.010)
-                parser.save(declarations, os.path.join(f, '.phpintel'))
+                intel_filename = os.path.join(f, '.phpintel')
+                parser.save(declarations, intel_filename)
 
     def set_progress_message(self, message):
         self.progress.message = message
