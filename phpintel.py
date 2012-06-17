@@ -42,22 +42,17 @@ TODO Custom regex patterns for matching special cases, like factory methods.
      'class': 'Mage_{1}_Model_{2}', 'cap_first': true}
 
 TODO Detect when new files are added/removed and rescan
-
-TODO Handle case when scan started while a scan is already in progress. Scan
-queues, perhaps.
 '''
 
 
 class ScanProjectCommand(sublime_plugin.WindowCommand):
     def run(self):
-        self.thread = ScanThread()
-        self.thread.start()
+        start_scan()
 
 
 class EventListener(sublime_plugin.EventListener):
     def on_post_save(self, view):
-        self.thread = ScanThread(file=view.file_name())
-        self.thread.start()
+        start_scan(path=view.file_name())
 
     def on_query_completions(self, view, prefix, locations):
         data = []
@@ -123,10 +118,31 @@ class EventListener(sublime_plugin.EventListener):
                 return True
 
 
+_scan_thread = None
+_scan_lock = threading.RLock()
+
+
+def start_scan(path='__all__'):
+    global _scan_thread
+
+    with _scan_lock:
+        if _scan_thread:
+            _scan_thread.queue(path)
+        else:
+            _scan_thread = ScanThread()
+            _scan_thread.queue(path)
+            _scan_thread.start()
+
+
 class ScanThread(threading.Thread):
-    def __init__(self, file=None):
-        self.file = file
+    _scan_queue = []
+
+    def __init__(self):
         threading.Thread.__init__(self)
+
+    def queue(self, path='__all__'):
+        if not path in self._scan_queue:
+            self._scan_queue.append(path)
 
     def run(self):
         self.progress = ThreadProgress(self, '', '')
@@ -134,43 +150,52 @@ class ScanThread(threading.Thread):
         start_time = time.time()
         scanned_something = False
 
-        if self.file:
-            # Scan one file
-            if os.path.splitext(self.file)[1] == '.php':
-                path = realpath(self.file)
-                for f in sublime.active_window().folders():
-                    if path.startswith(realpath(f)):
-                        self.progress.message = 'Scanning ' + path
-                        scanned_something = True
-                        d = phpparser.scan_file(path)
-                        intel.save(d, f, path)
-                        intel.update_index(path, *set([x['class'] for x in d]))
-                        intel.save_index(f)
-                        break
-        else:
-            # Scan entire project
-            for f in sublime.active_window().folders():
-                for root, dirs, files in os.walk(f, followlinks=True):
-                    for name in files:
-                        if os.path.splitext(name)[1] == '.php':
-                            scanned_something = True
-                            path = os.path.join(root, name)
-                            self.progress.message = 'Scanning ' + path
-                            d = phpparser.scan_file(path)
-                            if d:
-                                intel.save(d, f, path)
-                                intel.update_index(path, *set([x['class'] for x in d]))
-                            time.sleep(0.010)
-                intel.save_index(f)
-                intel.reset()
+        while True:
+            with _scan_lock:
+                if len(self._scan_queue) == 0:
+                    global _scan_thread
+                    _scan_thread = None
+                    return
 
-        if scanned_something:
-            elapsed_s = time.time() - start_time
-            if elapsed_s > 120:
-                elapsed = '{min:d}m{sec:d}s'.format(min=int(elapsed_s / 60), sec=int(elapsed_s % 60))
-            else:
-                elapsed = '{sec:.2f}s'.format(sec=elapsed_s)
-            self.progress.success_message = 'Scan completed in {elapsed}'.format(elapsed=elapsed)
+                filename = self._scan_queue.pop()
+
+            if filename == '__all__':
+                # Scan entire project
+                for f in sublime.active_window().folders():
+                    for root, dirs, files in os.walk(f, followlinks=True):
+                        for name in files:
+                            if os.path.splitext(name)[1] == '.php':
+                                scanned_something = True
+                                path = os.path.join(root, name)
+                                self.progress.message = 'Scanning ' + path
+                                d = phpparser.scan_file(path)
+                                if d:
+                                    intel.save(d, f, path)
+                                    intel.update_index(path, *set([x['class'] for x in d]))
+                                time.sleep(0.010)
+                    intel.save_index(f)
+                    intel.reset()
+            elif filename:
+                # Scan one file
+                if os.path.splitext(filename)[1] == '.php':
+                    path = realpath(filename)
+                    for f in sublime.active_window().folders():
+                        if path.startswith(realpath(f)):
+                            self.progress.message = 'Scanning ' + path
+                            scanned_something = True
+                            d = phpparser.scan_file(path)
+                            intel.save(d, f, path)
+                            intel.update_index(path, *set([x['class'] for x in d]))
+                            intel.save_index(f)
+                            break
+
+            if scanned_something:
+                elapsed_s = time.time() - start_time
+                if elapsed_s > 120:
+                    elapsed = '{min:d}m{sec:d}s'.format(min=int(elapsed_s / 60), sec=int(elapsed_s % 60))
+                else:
+                    elapsed = '{sec:.2f}s'.format(sec=elapsed_s)
+                self.progress.success_message = 'Scan completed in {elapsed}'.format(elapsed=elapsed)
 
 
 class ThreadProgress(threading.Thread):

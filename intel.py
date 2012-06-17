@@ -197,7 +197,7 @@ def save(declarations, root, filename):
     '''
     intel_filename = get_intel_path(root, filename)
     with open(intel_filename, 'wb') as f:
-        pickle.dump(declarations, f)
+        pickle.dump(declarations, f, pickle.HIGHEST_PROTOCOL)
 
 
 def load(root, filename):
