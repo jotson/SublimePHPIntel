@@ -32,8 +32,6 @@ import phpparser
 import intel
 
 '''
-TODO Document::model()-> doesn't seem to be working in Yii projects
-
 TODO Detect variable assignment. e.g. $var = <code> where code returns an object
 
 TODO Custom regex patterns for matching special cases, like factory methods.
