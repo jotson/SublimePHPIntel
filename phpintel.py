@@ -88,25 +88,34 @@ class EventListener(sublime_plugin.EventListener):
         found = []
         intel.reset()
 
+        point = view.sel()[0].a
+        
+        if view.score_selector(point, 'source.php') == 0 or view.score_selector(point, 'string.quoted') > 0:
+            return False
+
         if self.has_intel():
             # Find context
-            point = view.sel()[0].a
             source = view.substr(sublime.Region(0, view.size()))
             context = phpparser.get_context(source, point)
             operator = view.substr(sublime.Region(point - 2, point))
             if len(context) == 1 and operator != '->' and operator != '::':
-                context = ['__global__']
+                if len(context[0]) >= 2:
+                    context = ['__global__', context[0]]
+                else:
+                    context = None
 
             # Iterate context and find completion at this point
             if context:
                 for f in sublime.active_window().folders():
                     intel.load_index(f)
+            else:
+                return False
 
             if not intel:
                 return False
 
             context_class, context_partial = intel.get_class(context)
-            #print '>>>', context, context_class, context_partial, str(time.time())
+            # print '>>>', context, context_class, context_partial, str(time.time())
 
             if context_class:
                 intel.find_completions(context, operator, context_class, context_partial, found, [])

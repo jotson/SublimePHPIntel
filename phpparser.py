@@ -135,6 +135,7 @@ def get_context(source, point):
     end = 0
     for t in tokens:
         kind, stmt, line = t
+        # print kind, stmt, line
         if kind == None and stmt == '(':
             nest += 1
         if kind == None and stmt == ')':
@@ -142,6 +143,8 @@ def get_context(source, point):
         if kind == None and stmt == '=':
             break
         if kind == None and stmt == ';':
+            break
+        if kind == None and stmt == '.':
             break
         if kind == None and (stmt == '{' or stmt == '}'):
             break
