@@ -128,6 +128,7 @@ def get_context(source, point):
         the previous statement.
     Then create the context from that point and forward.
     '''
+    visibility = None
     context = []
     tokens = get_all_tokens(source=source[:point])
     tokens.reverse()
@@ -150,10 +151,16 @@ def get_context(source, point):
             break
         if kind == 'T_NEW':
             break
+        if kind == 'T_DOUBLE_COLON' and visibility == None:
+            visibility = 'public'
         if nest == 0 and kind == 'T_VARIABLE':
             context.append(stmt)
+            if stmt == '$this' and visibility == None:
+                visibility = 'all'
         if nest == 0 and kind == 'T_STRING':
             context.append(stmt)
+            if visibility == None:
+                visibility = 'public'
         if nest > 0:
             break
         end += 1
@@ -176,7 +183,7 @@ def get_context(source, point):
         if class_name:
             context[0] = class_name
 
-    return context
+    return context, visibility
 
 
 def convert_raw_tokens(raw_tokens):
@@ -276,6 +283,7 @@ def convert_raw_tokens(raw_tokens):
         elif t == 'T_VARIABLE' and kind == None and in_class and nest == 1 and name == None:
             kind = 'var'
             name = stmt
+            args = []
             if doc:
                 data = re.findall('@var\s+([\w|\||\$]*?)[\s|$]', doc)
                 if data:

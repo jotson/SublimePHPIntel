@@ -145,7 +145,7 @@ def get_intel(class_name):
     return intel
 
 
-def find_completions(context, operator, context_class, context_partial, found, parsed=[]):
+def find_completions(context, operator, context_class, context_partial, found, match_visibility='public', parsed=[]):
     if context_class in parsed:
         return
 
@@ -170,17 +170,12 @@ def find_completions(context, operator, context_class, context_partial, found, p
             if not context_class in parsed:
                 parsed.append(context_class)
                 if i['extends']:
-                    find_completions(context, operator, i['extends'], context_partial, found, parsed)
+                    find_completions(context, operator, i['extends'], context_partial, found, match_visibility, parsed)
             if i['name'] and i['name'].lower().startswith(context_partial.lower()):
-                match_visibility = 'public'
                 match_static = 0
-                if context[0] == '$this' and len(context) == 2:
-                    match_visibility = 'all'
-                    match_static = 0
                 if operator == '::':
-                    match_visibility = 'public'
                     match_static = 1
-                if int(i['static']) == int(match_static) and i['visibility'] == match_visibility:
+                if int(i['static']) == int(match_static) and (i['visibility'] == match_visibility or match_visibility == 'all'):
                     found.append(i)
 
 

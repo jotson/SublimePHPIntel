@@ -96,7 +96,8 @@ class EventListener(sublime_plugin.EventListener):
         if self.has_intel():
             # Find context
             source = view.substr(sublime.Region(0, view.size()))
-            context = phpparser.get_context(source, point)
+            context, visibility = phpparser.get_context(source, point)
+            # print context, visibility
             operator = view.substr(sublime.Region(point - 2, point))
             if len(context) == 1 and operator != '->' and operator != '::':
                 if len(context[0]) >= 2:
@@ -118,7 +119,7 @@ class EventListener(sublime_plugin.EventListener):
             # print '>>>', context, context_class, context_partial, str(time.time())
 
             if context_class:
-                intel.find_completions(context, operator, context_class, context_partial, found, [])
+                intel.find_completions(context, operator, context_class, context_partial, found, visibility, [])
 
         if found:
             for i in found:
@@ -126,10 +127,12 @@ class EventListener(sublime_plugin.EventListener):
                 argnames = []
                 if i['kind'] == 'var':
                     snippet = i['name'].replace('$', '')
-                    data.append(tuple([str(i['name']) + '\t' + str(i['returns']), str(snippet)]))
+                    returns = i['returns'] if i['returns'] else 'mixed'
+                    data.append(tuple([str(i['name']) + '\t' + returns, str(snippet)]))
                 if i['kind'] == 'class':
                     snippet = i['name']
-                    data.append(tuple([str(i['name']) + '\t' + str(i['returns']), str(snippet)]))
+                    returns = i['returns'] if i['returns'] else 'mixed'
+                    data.append(tuple([str(i['name']) + '\t' + returns, str(snippet)]))
                 if i['kind'] == 'func':
                     a = []
                     if len(i['args']):
@@ -140,8 +143,8 @@ class EventListener(sublime_plugin.EventListener):
                             argnames.append(argname)
                             a.append('${' + str(j + 1) + ':' + argname.replace('$', '\\$') + '}')
                     snippet = '{name}({args})'.format(name=i['name'], args=', '.join(a))
-                    returns = '\t' + i['returns'] if i['returns'] else ''
-                    data.append(tuple([str(i['name']) + '(' + ', '.join(argnames) + ')' + returns, str(snippet)]))
+                    returns = i['returns'] if i['returns'] else 'mixed'
+                    data.append(tuple([str(i['name']) + '(' + ', '.join(argnames) + ')' + '\t' + returns, str(snippet)]))
 
         if data:
             # Remove duplicates and sort
