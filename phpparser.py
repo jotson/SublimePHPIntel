@@ -157,6 +157,8 @@ def get_context(source, point):
             context.append(stmt)
             if stmt == '$this' and visibility == None:
                 visibility = 'all'
+            if visibility == None:
+                visibility = 'public'
         if nest == 0 and kind == 'T_STRING':
             context.append(stmt)
             if visibility == None:
