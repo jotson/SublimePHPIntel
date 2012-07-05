@@ -52,17 +52,34 @@ class GotoDeclarationCommand(sublime_plugin.TextCommand):
         intel.reset()
 
         view = self.view
-        class_name = view.substr(expand_word(view, view.sel()[0]))
+        symbol = view.substr(expand_word(view, view.sel()[0]))
         path = None
-        if class_name:
+        if symbol:
             for f in sublime.active_window().folders():
                 intel.load_index(f)
-            if class_name in intel._index:
-                # TODO What to do when a class is defined more than once?
-                path = intel._index[class_name].pop()
+            if symbol in intel._index:
+                # Find class
+                # TODO Show a quicklist when there is more than one choice
+                path = intel._index[symbol].pop()
                 self.view.window().open_file(path, sublime.TRANSIENT)
+            # elif symbol in intel._symbol_index:
+            #     # Find other symbol
+            #     # TODO Build an index (with line numbers) of all declared symbols to make this faster
+            #     # TODO Show a quicklist when there is more than one choice
+            #     path = intel._symbol_index[symbol].pop()
+            #     self.view.window().open_file(path, sublime.TRANSIENT)
+            #     # Proof of concept implementation:
+            #     # for class_name in intel._index.keys():
+            #     #     i = intel.get_intel(class_name)
+            #     #     for s in i:
+            #     #         if s['name'] == symbol:
+            #     #             path = intel._index[class_name].pop()
+            #     #             view = self.view.window().open_file(path, sublime.TRANSIENT)
+            #     #             break
+            else:
+                sublime.status_message('Not found')
         else:
-            sublime.status_message('Select a class name first')
+            sublime.status_message('Put cursor on some text first')
 
 
 def expand_word(view, region):
@@ -116,7 +133,7 @@ class EventListener(sublime_plugin.EventListener):
                 return False
 
             context_class, context_partial = intel.get_class(context)
-            # print '>>>', context, context_class, context_partial, str(time.time())
+            # print '>>>', context, visibility, context_class, context_partial, str(time.time())
 
             if context_class:
                 intel.find_completions(context, operator, context_class, context_partial, found, visibility, [])

@@ -2,5 +2,9 @@
     {
         "caption": "PHPIntel: Scan Project",
         "command": "scan_project"
+    },
+    {
+        "caption": "PHPIntel: Goto Declaration",
+        "command": "goto_declaration"
     }
 ]
