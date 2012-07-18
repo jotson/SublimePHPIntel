@@ -290,6 +290,15 @@ def convert_raw_tokens(raw_tokens):
                 data = re.findall('@var\s+([\w|\||\$]*?)[\s|$]', doc)
                 if data:
                     returns = data[0]
+        elif t == 'T_CONST':
+            kind = 'var'
+            name = search_ahead(n, 'T_STRING')
+            args = []
+            static = True
+            if doc:
+                data = re.findall('@var\s+([\w|\||\$]*?)[\s|$]', doc)
+                if data:
+                    returns = data[0]
         elif t == 'T_FUNCTION':
             kind = 'func'
             name = search_ahead(n, 'T_STRING')
