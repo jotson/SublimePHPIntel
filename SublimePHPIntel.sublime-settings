@@ -1,0 +1,134 @@
+{
+    "scan_blacklist": [ "yiilite.php", "yii/i18n/data", "yii/messages" ],
+
+   /**
+     * DO NOT configure your own custom factories in this file. Instead, open
+     * the Preferences | Package Settings | SublimePHPIntel | Settings - User
+     * file and configure the 'customfactories' key there. That way your custom
+     * settings will survive when the plugin is upgraded.
+     */
+    "factories":
+        [
+            /**
+             * Magento
+             */
+            {
+                "pattern": "Mage::get(Model|Singleton)\\(.(\\w*?)/(\\w*?)_(\\w*?)_(\\w*?)_(\\w*?).\\)",
+                "class": "Mage_%2_Model_%3_%4_%5_%6",
+                "capitalize": true
+            },
+
+            {
+                "pattern": "Mage::get(Model|Singleton)\\(.(\\w*?)/(\\w*?)_(\\w*?)_(\\w*?).\\)",
+                "class": "Mage_%2_Model_%3_%4_%5",
+                "capitalize": true
+            },
+
+            {
+                "pattern": "Mage::get(Model|Singleton)\\(.(\\w*?)/(\\w*?)_(\\w*?).\\)",
+                "class": "Mage_%2_Model_%3_%4",
+                "capitalize": true
+            },
+
+
+            {
+                "pattern": "Mage::get(Model|Singleton)\\(.(\\w*?)/(\\w*?).\\)",
+                "class": "Mage_%2_Model_%3",
+                "capitalize": true
+            },
+
+            {
+                "pattern": "Mage::helper\\(.(\\w*?).\\)",
+                "class": "Mage_%1_Helper_Data",
+                "capitalize": true
+            },
+
+            /**
+             * Yii
+             */
+            {
+                "pattern": "Yii::app\\(\\)->assetManager",
+                "class": "CAssetManager"
+            },
+            
+            {
+                "pattern": "Yii::app\\(\\)->authManager",
+                "class": "CAuthManager"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->cache",
+                "class": "CCache"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->clientScript",
+                "class": "CClientScript"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->coreMessages",
+                "class": "CPhpMessageSource"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->db",
+                "class": "CDbConnection"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->errorHandler",
+                "class": "CErrorHandler"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->format",
+                "class": "CFormatter"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->messages",
+                "class": "CPhpMessageSource"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->request",
+                "class": "CHttpRequest"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->securityManager",
+                "class": "CSecurityManager"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->session",
+                "class": "CHttpSession"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->statePersister",
+                "class": "CStatePersister"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->urlManager",
+                "class": "CUrlManager"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->user",
+                "class": "CWebUser"
+            },
+
+            {
+                "pattern": "Yii::app\\(\\)->themeManager",
+                "class": "CThemeManager"
+            },
+            
+            /**
+             * CodeIgniter
+             */
+            {}
+        ]
+}

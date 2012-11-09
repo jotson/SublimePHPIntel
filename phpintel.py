@@ -27,7 +27,6 @@ import time
 import re
 import sublime
 import sublime_plugin
-from os.path import realpath
 import phpparser
 import intel
 
@@ -45,6 +44,11 @@ TODO Detect when new files are added/removed and rescan
 class ScanProjectCommand(sublime_plugin.WindowCommand):
     def run(self):
         start_scan()
+
+
+class ScanAbortCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        abort_scan()
 
 
 class GotoDeclarationCommand(sublime_plugin.TextCommand):
@@ -193,8 +197,16 @@ def start_scan(path='__all__'):
             _scan_thread.start()
 
 
+def abort_scan():
+    global _scan_thread
+
+    if _scan_thread:
+        _scan_thread.abort()
+
+
 class ScanThread(threading.Thread):
     _scan_queue = []
+    _abort = False
 
     def __init__(self):
         threading.Thread.__init__(self)
@@ -203,11 +215,25 @@ class ScanThread(threading.Thread):
         if not path in self._scan_queue:
             self._scan_queue.append(path)
 
+    def abort(self):
+        self._abort = True
+
     def run(self):
+        self._abort = False
         self.progress = ThreadProgress(self, '', '')
         self.progress.start()
         start_time = time.time()
         scanned_something = False
+        n = 0
+
+        s = sublime.load_settings("SublimePHPIntel.sublime-settings")
+        blacklist = s.get("scan_blacklist")
+
+        def in_blacklist(path):
+            for b in blacklist:
+                if path.find(b) >= 0:
+                    return True
+            return False
 
         while True:
             with _scan_lock:
@@ -222,24 +248,39 @@ class ScanThread(threading.Thread):
                 # Scan entire project
                 for f in sublime.active_window().folders():
                     intel.reset()
+                    if self._abort:
+                        break
                     for root, dirs, files in os.walk(f, followlinks=True):
+                        if self._abort:
+                            break
                         for name in files:
+                            if self._abort:
+                                break
                             if os.path.splitext(name)[1] == '.php':
                                 scanned_something = True
                                 path = os.path.join(root, name)
-                                self.progress.message = 'Scanning ' + path
+                                if in_blacklist(path):
+                                    continue
+                                newpath, currentfile = os.path.split(path)
+                                newpath, lastdir = os.path.split(newpath)
+                                self.progress.message = 'Scanning .../' + lastdir + '/' + currentfile
                                 d = phpparser.scan_file(path)
                                 if d:
                                     intel.save(d, f, path)
                                     intel.update_index(path, *set([x['class'] for x in d]))
                                 time.sleep(0.010)
+                                n = n + 1
+                                if n % 100 == 0:
+                                    intel.save_index(f)
                     intel.save_index(f)
             elif filename:
                 # Scan one file
                 if os.path.splitext(filename)[1] == '.php':
-                    path = realpath(filename)
+                    path = filename
+                    if in_blacklist(path):
+                        return
                     for f in sublime.active_window().folders():
-                        if path.startswith(realpath(f)):
+                        if path.startswith(f):
                             self.progress.message = 'Scanning ' + path
                             scanned_something = True
                             d = phpparser.scan_file(path)

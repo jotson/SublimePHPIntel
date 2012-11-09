@@ -30,7 +30,6 @@ SOFTWARE.
 import os
 import hashlib
 import pickle
-from os.path import realpath
 
 _index = {}
 _roots = []
@@ -60,7 +59,7 @@ def get_intel_path(root, filename):
     '''
     folder = get_intel_folder(root)
     if folder:
-        hashed_filename = hashlib.md5(realpath(filename)).hexdigest()
+        hashed_filename = hashlib.md5(filename).hexdigest()
         return os.path.join(folder, hashed_filename)
 
     return None
@@ -187,7 +186,7 @@ def save_index(root):
     index_filename = os.path.join(folder, 'index')
     if folder:
         with open(index_filename, 'wb') as f:
-            pickle.dump(_index, f, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(_index, f)
     
 
 def save(declarations, root, filename):
@@ -196,7 +195,7 @@ def save(declarations, root, filename):
     '''
     intel_filename = get_intel_path(root, filename)
     with open(intel_filename, 'wb') as f:
-        pickle.dump(declarations, f, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(declarations, f)
 
 
 def load(root, filename):

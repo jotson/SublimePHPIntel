@@ -34,6 +34,10 @@ import re
 import json
 import subprocess
 import tempfile
+import sublime
+import re
+import string
+
 
 _constants = {}
 
@@ -111,6 +115,32 @@ def get_all_tokens(source=None, filename=None):
     return tokens
 
 
+def apply_patterns(source, kind):
+    s = sublime.load_settings("SublimePHPIntel.sublime-settings")
+    patterns = s.get(kind)
+    for p in patterns:
+        if p:
+            try:
+                m = re.search(p.get('pattern'), source, re.UNICODE)
+                if m:
+                    # Build replacement string with options
+                    c = p.get('class')
+                    for i in range(1,10):
+                        if m.lastindex >= i and c.find('%'+str(i)) >= 0:
+                            value = m.group(i)
+                            if p.get('capitalize'):
+                                value = value[0:1].capitalize() + value[1:]
+                            c = c.replace('%'+str(i), value)
+
+                    # Globally replace match in source
+                    source = source.replace(m.group(0), c)
+            except Exception as e:
+                print e
+                print 'SublimePHPIntel: Invalid pattern: ' + p.get('pattern')
+
+    return source
+
+
 def get_context(source, point):
     '''
     Given a snippet of code, return a list of tokens for the classes and
@@ -124,19 +154,28 @@ def get_context(source, point):
 
         ['$class', 'setAlpha']
 
-    First, read the list backwards until we get to an enclosing block or
-        the previous statement.
-    Then create the context from that point and forward.
+    Steps:
+        - Replace all factory regexs in the source defined in the settings.
+        - Read the list backwards until we get to an enclosing block or the previous statement.
+        - Create the context from that point and forward.
     '''
+
+    source = source[:point]
+
+    source = apply_patterns(source, 'customfactories')
+    source = apply_patterns(source, 'factories')
+
     visibility = None
     context = []
-    tokens = get_all_tokens(source=source[:point])
+    tokens = get_all_tokens(source)
     tokens.reverse()
     nest = 0
     end = 0
     for t in tokens:
         kind, stmt, line = t
         # print kind, stmt, line
+        if kind == 'T_DOUBLE_COLON' and visibility == None:
+            visibility = 'public'
         if kind == None and stmt == '(':
             nest += 1
         if kind == None and stmt == ')':
@@ -149,10 +188,10 @@ def get_context(source, point):
             break
         if kind == None and (stmt == '{' or stmt == '}'):
             break
+        if kind == 'T_OPEN_TAG':
+            break
         if kind == 'T_NEW':
             break
-        if kind == 'T_DOUBLE_COLON' and visibility == None:
-            visibility = 'public'
         if nest == 0 and kind == 'T_VARIABLE':
             context.append(stmt)
             if stmt == '$this' and visibility == None:
@@ -165,6 +204,7 @@ def get_context(source, point):
                 visibility = 'public'
         if nest > 0:
             break
+
         end += 1
 
     context.reverse()
@@ -347,9 +387,8 @@ def scan_file(filename, extension='.php'):
         raw_tokens = get_all_tokens(filename=filename)
         declarations = convert_raw_tokens(raw_tokens)
 
-        path = os.path.realpath(filename)
         for i in range(0, len(declarations)):
-            declarations[i]['path'] = path
+            declarations[i]['path'] = filename
 
     return declarations
 

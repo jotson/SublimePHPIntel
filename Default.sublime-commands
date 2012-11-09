@@ -4,6 +4,10 @@
         "command": "scan_project"
     },
     {
+        "caption": "PHPIntel: Abort Scan",
+        "command": "scan_abort"
+    },
+    {
         "caption": "PHPIntel: Goto Declaration",
         "command": "goto_declaration"
     }
