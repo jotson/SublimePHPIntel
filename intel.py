@@ -186,7 +186,7 @@ def save_index(root):
     index_filename = os.path.join(folder, 'index')
     if folder:
         with open(index_filename, 'wb') as f:
-            pickle.dump(_index, f)
+            pickle.dump(_index, f, pickle.HIGHEST_PROTOCOL)
     
 
 def save(declarations, root, filename):
@@ -195,7 +195,7 @@ def save(declarations, root, filename):
     '''
     intel_filename = get_intel_path(root, filename)
     with open(intel_filename, 'wb') as f:
-        pickle.dump(declarations, f)
+        pickle.dump(declarations, f, pickle.HIGHEST_PROTOCOL)
 
 
 def load(root, filename):
