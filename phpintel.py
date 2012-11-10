@@ -53,6 +53,9 @@ class ScanAbortCommand(sublime_plugin.WindowCommand):
 
 class GotoDeclarationCommand(sublime_plugin.TextCommand):
     def run(self, edit):
+        if _scan_thread:
+            return
+
         intel.reset()
 
         view = self.view
@@ -105,9 +108,13 @@ class EventListener(sublime_plugin.EventListener):
         start_scan(path=view.file_name())
 
     def on_query_completions(self, view, prefix, locations):
+        if _scan_thread:
+            return
+            
+        intel.reset()
+        
         data = []
         found = []
-        intel.reset()
 
         point = view.sel()[0].a
         
@@ -224,7 +231,6 @@ class ScanThread(threading.Thread):
         self.progress.start()
         start_time = time.time()
         scanned_something = False
-        n = 0
 
         s = sublime.load_settings("SublimePHPIntel.sublime-settings")
         blacklist = s.get("scan_blacklist")
@@ -269,9 +275,6 @@ class ScanThread(threading.Thread):
                                     intel.save(d, f, path)
                                     intel.update_index(path, *set([x['class'] for x in d]))
                                 time.sleep(0.010)
-                                n = n + 1
-                                if n % 100 == 0:
-                                    intel.save_index(f)
                     intel.save_index(f)
             elif filename:
                 # Scan one file
