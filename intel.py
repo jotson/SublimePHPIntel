@@ -108,6 +108,13 @@ def load_index(root):
 
 
 def get_class(context):
+    '''
+    Recursively search the intel index to find the actual classes
+    that correspond to each item in context.
+
+        context = [token1, token2, token3, ... , tokenN]
+    '''
+
     if len(context) == 0:
         return None, None
 
@@ -117,6 +124,13 @@ def get_class(context):
 
         return '__global__', context[0]
 
+    if len(context) == 2:
+        # We're done when there are just two tokens left. That's because the
+        # final token is what we are trying to complete and the penultimate
+        # token should have already been determined.
+        return context[0], context[1]
+
+    # Determine the class of context[1] and recurse
     intel = get_intel(context[0])
     for i in intel:
         if i['name'] == context[1] or i['name'] == '$' + context[1]:
@@ -124,7 +138,8 @@ def get_class(context):
                 context[1] = i['returns']
                 return get_class(context[1:])
 
-    # Nothing was found so search parent classes
+    # Didn't find class of context[1] so try again starting from the class
+    # that context[0] extends
     for i in intel:
         if i['class'] == context[0] and i['extends']:
             context[0] = i['extends']

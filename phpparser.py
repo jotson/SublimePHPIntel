@@ -181,6 +181,8 @@ def get_context(source, point):
             operator = '::'
         if kind == 'T_OBJECT_OPERATOR' and operator == None:
             operator = '->'
+        if len(context) == 0 and (kind == 'T_DOUBLE_COLON' or kind == 'T_OBJECT_OPERATOR'):
+            context.append('')
         if kind == None and stmt == '(':
             nest += 1
         if kind == None and stmt == ')':
