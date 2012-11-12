@@ -167,6 +167,7 @@ def get_context(source, point):
 
     visibility = None
     context = []
+    operator = None
     tokens = get_all_tokens(source)
     tokens.reverse()
     nest = 0
@@ -176,6 +177,10 @@ def get_context(source, point):
         # print kind, stmt, line
         if kind == 'T_DOUBLE_COLON' and visibility == None:
             visibility = 'public'
+        if kind == 'T_DOUBLE_COLON' and operator == None:
+            operator = '::'
+        if kind == 'T_OBJECT_OPERATOR' and operator == None:
+            operator = '->'
         if kind == None and stmt == '(':
             nest += 1
         if kind == None and stmt == ')':
@@ -225,7 +230,7 @@ def get_context(source, point):
         if class_name:
             context[0] = class_name
 
-    return context, visibility
+    return context, visibility, operator
 
 
 def convert_raw_tokens(raw_tokens):

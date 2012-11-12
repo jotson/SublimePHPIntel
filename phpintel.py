@@ -124,14 +124,10 @@ class EventListener(sublime_plugin.EventListener):
         if self.has_intel():
             # Find context
             source = view.substr(sublime.Region(0, view.size()))
-            context, visibility = phpparser.get_context(source, point)
-            # print context, visibility
-            operator = view.substr(sublime.Region(point - 2, point))
+            context, visibility, operator = phpparser.get_context(source, point)
+            # print context, visibility, operator
             if len(context) == 1 and operator != '->' and operator != '::':
-                if len(context[0]) >= 2:
-                    context = ['__global__', context[0]]
-                else:
-                    context = None
+                context = ['__global__', context[0]]
 
             # Iterate context and find completion at this point
             if context:
