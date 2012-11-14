@@ -193,6 +193,8 @@ def get_context(source, point):
             break
         if kind == None and stmt == '.':
             break
+        if kind == None and stmt == ',':
+            break
         if kind == None and (stmt == '{' or stmt == '}'):
             break
         if kind == 'T_OPEN_TAG':
