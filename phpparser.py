@@ -189,6 +189,10 @@ def get_context(source, point):
             nest -= 1
         if kind == None and stmt == '=':
             break
+        if kind == 'T_CONCAT_EQUAL':
+            break
+        if kind == 'T_PLUS_EQUAL':
+            break
         if kind == None and stmt == ';':
             break
         if kind == None and stmt == '.':
