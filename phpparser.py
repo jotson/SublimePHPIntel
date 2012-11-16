@@ -160,6 +160,7 @@ def get_context(source, point):
         - Create the context from that point and forward.
     '''
 
+    fullsource = source
     source = source[:point]
 
     source = apply_patterns(source, 'customfactories')
@@ -225,9 +226,10 @@ def get_context(source, point):
     if context and context[0].startswith('$'):
         class_name = None
         if context[0].startswith('$this'):
-            tokens = convert_raw_tokens(get_all_tokens(source))
+            tokens = convert_raw_tokens(get_all_tokens(fullsource))
             class_name = tokens[0]['class'] if tokens else None
-        else:
+        
+        if class_name == None:
             searchtext = context[0].replace('$', '\$')
             searchtext = searchtext.replace('(', '\(')
             searchtext = searchtext.replace(')', '\)')
