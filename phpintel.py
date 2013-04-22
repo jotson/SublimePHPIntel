@@ -195,7 +195,10 @@ def start_scan(path='__all__'):
         if _scan_thread:
             _scan_thread.queue(path)
         else:
-            _scan_thread = ScanThread()
+            s = sublime.load_settings("SublimePHPIntel.sublime-settings")
+            blacklist = s.get("scan_blacklist")
+
+            _scan_thread = ScanThread(blacklist)
             _scan_thread.queue(path)
             _scan_thread.start()
 
@@ -210,8 +213,10 @@ def abort_scan():
 class ScanThread(threading.Thread):
     _scan_queue = []
     _abort = False
+    _blacklist = None
 
-    def __init__(self):
+    def __init__(self, blacklist):
+        self._blacklist = blacklist
         threading.Thread.__init__(self)
 
     def queue(self, path='__all__'):
@@ -228,11 +233,8 @@ class ScanThread(threading.Thread):
         start_time = time.time()
         scanned_something = False
 
-        s = sublime.load_settings("SublimePHPIntel.sublime-settings")
-        blacklist = s.get("scan_blacklist")
-
         def in_blacklist(path):
-            for b in blacklist:
+            for b in self._blacklist:
                 if path.find(b) >= 0:
                     return True
             return False
