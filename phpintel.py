@@ -197,8 +197,9 @@ def start_scan(path='__all__'):
         else:
             s = sublime.load_settings("SublimePHPIntel.sublime-settings")
             blacklist = s.get("scan_blacklist")
+            folders = sublime.active_window().folders();
 
-            _scan_thread = ScanThread(blacklist)
+            _scan_thread = ScanThread(blacklist, folders)
             _scan_thread.queue(path)
             _scan_thread.start()
 
@@ -214,9 +215,11 @@ class ScanThread(threading.Thread):
     _scan_queue = []
     _abort = False
     _blacklist = None
+    _folders = None
 
-    def __init__(self, blacklist):
+    def __init__(self, blacklist, folders):
         self._blacklist = blacklist
+        self._folders = folders
         threading.Thread.__init__(self)
 
     def queue(self, path='__all__'):
@@ -250,7 +253,7 @@ class ScanThread(threading.Thread):
 
             if filename == '__all__':
                 # Scan entire project
-                for f in sublime.active_window().folders():
+                for f in self._folders:
                     intel.reset()
                     if self._abort:
                         break
@@ -280,7 +283,7 @@ class ScanThread(threading.Thread):
                     path = filename
                     if in_blacklist(path):
                         return
-                    for f in sublime.active_window().folders():
+                    for f in self._folders:
                         if path.startswith(f):
                             self.progress.message = 'Scanning ' + path
                             scanned_something = True
