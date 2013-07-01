@@ -59,7 +59,7 @@ def get_intel_path(root, filename):
     '''
     folder = get_intel_folder(root)
     if folder:
-        hashed_filename = hashlib.md5(filename).hexdigest()
+        hashed_filename = hashlib.md5(filename.encode()).hexdigest()
         return os.path.join(folder, hashed_filename)
 
     return None

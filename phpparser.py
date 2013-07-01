@@ -59,6 +59,7 @@ def get_all_token_names():
     for i in range(0, 999):
         php += "echo '{code},'.token_name({code}).'|';".format(code=i)
     result = subprocess.Popen(['php', '-r', php], bufsize=1, stdout=subprocess.PIPE, shell=False).communicate()[0]
+    result = result.decode()
     for constant in result.split('|'):
         if constant.find(',') >= 0:
             code, name = constant.split(',')
@@ -105,6 +106,7 @@ def get_all_tokens(source=None, filename=None):
             f.write(source.encode('utf-8'))
     php = "echo json_encode(token_get_all(file_get_contents('{source}')));".format(source=filename)
     tokens = subprocess.Popen(['php', '-r', php], bufsize=1, stdout=subprocess.PIPE, shell=False).communicate()[0]
+    tokens = tokens.decode()
     tokens = json.loads(tokens)
     for i in range(0, len(tokens)):
         tokens[i] = token(tokens[i])
@@ -118,6 +120,10 @@ def get_all_tokens(source=None, filename=None):
 def apply_patterns(source, kind):
     s = sublime.load_settings("SublimePHPIntel.sublime-settings")
     patterns = s.get(kind)
+    
+    if patterns == None:
+        return source
+
     for p in patterns:
         if p:
             try:
@@ -135,8 +141,8 @@ def apply_patterns(source, kind):
                     # Globally replace match in source
                     source = source.replace(m.group(0), c)
             except Exception as e:
-                print e
-                print 'SublimePHPIntel: Invalid pattern: ' + p.get('pattern')
+                print(e)
+                print('SublimePHPIntel: Invalid pattern: ' + p.get('pattern'))
 
     return source
 
@@ -268,16 +274,16 @@ def convert_raw_tokens(raw_tokens):
     def save():
         if class_name or name:
             fields = {
-                'class': unicode(class_name) if class_name else '__global__',
-                'extends': unicode(extends) if extends else '',
-                'implements': unicode(implements) if implements else '',
-                'visibility': unicode(visibility) if visibility else 'public',
+                'class': class_name if class_name else '__global__',
+                'extends': extends if extends else '',
+                'implements': implements if implements else '',
+                'visibility': visibility if visibility else 'public',
                 'static': '1' if static else '0',
-                'kind': unicode(kind) if kind else '',
-                'name': unicode(name) if name else '',
+                'kind': kind if kind else '',
+                'name': name if name else '',
                 'args': args,
-                'returns': unicode(returns) if returns else '',
-                'doc': unicode(doc) if doc else '',
+                'returns': returns if returns else '',
+                'doc': doc if doc else '',
             }
             declarations.append(fields)
 
@@ -445,4 +451,4 @@ if __name__ == '__main__':
 
     else:
         declarations = scan_file(filename)
-        print json.dumps(declarations)
+        print(json.dumps(declarations))

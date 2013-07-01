@@ -27,8 +27,8 @@ import time
 import re
 import sublime
 import sublime_plugin
-import phpparser
-import intel
+from . import phpparser
+from . import intel
 
 '''
 TODO Detect variable assignment. e.g. $var = <code> where code returns an object
@@ -108,6 +108,12 @@ class EventListener(sublime_plugin.EventListener):
         start_scan(path=view.file_name())
 
     def on_query_completions(self, view, prefix, locations):
+        return self.complete(view)
+
+    def on_query_context(self, view, key, operator, operand, match_all):
+        return self.complete(view)
+
+    def complete(self, view):
         if _scan_thread:
             return
             
@@ -125,7 +131,7 @@ class EventListener(sublime_plugin.EventListener):
             # Find context
             source = view.substr(sublime.Region(0, view.size()))
             context, visibility, operator = phpparser.get_context(source, point)
-            # print context, visibility, operator
+            # print(context, visibility, operator)
             if len(context) == 1 and operator != '->' and operator != '::':
                 context = ['__global__', context[0]]
 
