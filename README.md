@@ -2,6 +2,8 @@
 
 PHP code scanner and analyzer for code intelligence within PHP projects.
 
+*Sublime Text 3: Checkout branch `st3` for Sublime Text 3 compatible version*
+
 ## Setup
 
 1. Create or open a project with PHP files
