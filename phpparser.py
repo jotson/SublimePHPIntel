@@ -436,6 +436,7 @@ def PHPopen(php):
     '''
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
     return subprocess.Popen(['php', '-r', php], bufsize=1, startupinfo=startupinfo, stdout=subprocess.PIPE, shell=False).communicate()[0]
     
 
