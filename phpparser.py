@@ -58,7 +58,7 @@ def get_all_token_names():
     php = ''
     for i in range(0, 999):
         php += "echo '{code},'.token_name({code}).'|';".format(code=i)
-    result = subprocess.Popen(['php', '-r', php], bufsize=1, stdout=subprocess.PIPE, shell=False).communicate()[0]
+    result = PHPopen(php)
     result = result.decode()
     for constant in result.split('|'):
         if constant.find(',') >= 0:
@@ -105,7 +105,7 @@ def get_all_tokens(source=None, filename=None):
         with os.fdopen(tmp, "wb") as f:
             f.write(source.encode('utf-8'))
     php = "echo json_encode(token_get_all(file_get_contents('{source}')));".format(source=filename)
-    tokens = subprocess.Popen(['php', '-r', php], bufsize=1, stdout=subprocess.PIPE, shell=False).communicate()[0]
+    tokens = PHPopen(php)
     tokens = tokens.decode()
     tokens = json.loads(tokens)
     for i in range(0, len(tokens)):
@@ -430,6 +430,14 @@ def scan_all_files(base_folder, extension='.php'):
 
     return declarations
 
+def PHPopen(php):
+    '''
+    Runs php through the application without showing a console window
+    '''
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    return subprocess.Popen(['php', '-r', php], bufsize=1, startupinfo=startupinfo, stdout=subprocess.PIPE, shell=False).communicate()[0]
+    
 
 '''
 Initialization
