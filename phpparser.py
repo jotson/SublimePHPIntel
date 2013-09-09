@@ -434,9 +434,11 @@ def PHPopen(php):
     '''
     Runs php through the application without showing a console window
     '''
-    startupinfo = subprocess.STARTUPINFO()
-    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    startupinfo.wShowWindow = subprocess.SW_HIDE
+    startupinfo = None
+    if os.name == 'nt':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
     return subprocess.Popen(['php', '-r', php], bufsize=1, startupinfo=startupinfo, stdout=subprocess.PIPE, shell=False).communicate()[0]
     
 
