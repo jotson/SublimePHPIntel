@@ -107,9 +107,13 @@ def get_all_tokens(source=None, filename=None):
     php = "echo json_encode(token_get_all(file_get_contents('{source}')));".format(source=filename)
     tokens = PHPopen(php)
     tokens = tokens.decode()
-    tokens = json.loads(tokens)
-    for i in range(0, len(tokens)):
-        tokens[i] = token(tokens[i])
+
+    try:
+        tokens = json.loads(tokens)
+        for i in range(0, len(tokens)):
+            tokens[i] = token(tokens[i])
+    except:
+        pass
 
     if source and tmp:
         os.unlink(filename)
@@ -132,7 +136,7 @@ def apply_patterns(source, kind):
                     # Build replacement string with options
                     c = p.get('class')
                     for i in range(1,10):
-                        if m.lastindex >= i and c.find('%'+str(i)) >= 0:
+                        if m.lastindex is not None and m.lastindex >= i and c.find('%'+str(i)) >= 0:
                             value = m.group(i)
                             if p.get('capitalize'):
                                 value = value[0:1].capitalize() + value[1:]
