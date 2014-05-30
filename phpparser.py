@@ -124,7 +124,7 @@ def get_all_tokens(source=None, filename=None):
 def apply_patterns(source, kind):
     s = sublime.load_settings("SublimePHPIntel.sublime-settings")
     patterns = s.get(kind)
-    
+
     if patterns == None:
         return source
 
@@ -228,6 +228,8 @@ def get_context(source, point):
                 visibility = 'public'
         if nest > 0:
             break
+        if nest < 0:
+            break
 
         end += 1
 
@@ -238,7 +240,7 @@ def get_context(source, point):
         if context[0].startswith('$this'):
             tokens = convert_raw_tokens(get_all_tokens(fullsource))
             class_name = tokens[0]['class'] if tokens else None
-        
+
         if class_name == None:
             searchtext = context[0].replace('$', '\$')
             searchtext = searchtext.replace('(', '\(')
@@ -296,7 +298,7 @@ def convert_raw_tokens(raw_tokens):
             t, stmt, line = raw_tokens[i]
             if t == search:
                 return stmt
-            
+
     n = 0
     for t, stmt, line in raw_tokens:
         if t == 'T_WHITESPACE':
@@ -444,7 +446,7 @@ def PHPopen(php):
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startupinfo.wShowWindow = subprocess.SW_HIDE
     return subprocess.Popen(['php', '-r', php], bufsize=1, startupinfo=startupinfo, stdout=subprocess.PIPE, shell=False).communicate()[0]
-    
+
 
 '''
 Initialization
@@ -458,7 +460,7 @@ if __name__ == '__main__':
     path it prints a representation of the source files it finds.
     '''
     filename = sys.argv[1]
-    
+
     if os.path.isdir(filename):
         declarations = scan_all_files(filename)
         for d in declarations:
