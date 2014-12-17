@@ -4,6 +4,7 @@ PHP code scanner and analyzer for code intelligence within PHP projects.
 
 ## Setup
 
+0. Install using Package Control
 1. Create or open a project with PHP files
 2. Run the PHPIntel: Scan Project command from the command palette
 
