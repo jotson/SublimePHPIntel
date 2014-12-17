@@ -1,0 +1,9 @@
+PHPIntel 1.0.2 Changelog:
+
+PHPIntel replaces deprecated MagentoIntel. It provides a superset of the same functionality making it suitable for use with any PHP frameworks, not just Magento.
+
+Documentation:
+https://github.com/jotson/SublimePHPIntel
+
+Contributions and bug reports are welcome:
+https://github.com/jotson/SublimePHPIntel
