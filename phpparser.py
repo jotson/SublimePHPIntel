@@ -40,6 +40,10 @@ import string
 
 
 _constants = {}
+startupinfo = None
+if os.name == 'nt':
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
 
 def get_all_token_names():
@@ -58,7 +62,7 @@ def get_all_token_names():
     php = ''
     for i in range(0, 999):
         php += "echo '{code},'.token_name({code}).'|';".format(code=i)
-    result = subprocess.Popen(['php', '-r', php], bufsize=1, stdout=subprocess.PIPE, shell=False).communicate()[0]
+    result = subprocess.Popen(['php', '-r', php], bufsize=1, stdout=subprocess.PIPE, shell=False, startupinfo=startupinfo).communicate()[0]
     for constant in result.split('|'):
         if constant.find(',') >= 0:
             code, name = constant.split(',')
@@ -104,7 +108,7 @@ def get_all_tokens(source=None, filename=None):
         with os.fdopen(tmp, "wb") as f:
             f.write(source.encode('utf-8'))
     php = "echo json_encode(token_get_all(file_get_contents('{source}')));".format(source=filename)
-    tokens = subprocess.Popen(['php', '-r', php], bufsize=1, stdout=subprocess.PIPE, shell=False).communicate()[0]
+    tokens = subprocess.Popen(['php', '-r', php], bufsize=1, stdout=subprocess.PIPE, shell=False, startupinfo=startupinfo).communicate()[0]
     tokens = json.loads(tokens)
     for i in range(0, len(tokens)):
         tokens[i] = token(tokens[i])
