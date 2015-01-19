@@ -110,9 +110,6 @@ class EventListener(sublime_plugin.EventListener):
     def on_query_completions(self, view, prefix, locations):
         return self.complete(view)
 
-    def on_query_context(self, view, key, operator, operand, match_all):
-        return self.complete(view)
-
     def complete(self, view):
         if _scan_thread:
             return
@@ -131,9 +128,9 @@ class EventListener(sublime_plugin.EventListener):
             # Find context
             source = view.substr(sublime.Region(0, view.size()))
             context, visibility, operator = phpparser.get_context(source, point)
-            # print(context, visibility, operator)
             if len(context) == 1 and operator != '->' and operator != '::':
                 context = ['__global__', context[0]]
+            # print(context, visibility, operator)
 
             # Iterate context and find completion at this point
             if context:
