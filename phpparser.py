@@ -131,19 +131,22 @@ def apply_patterns(source, kind):
     for p in patterns:
         if p:
             try:
-                m = re.search(p.get('pattern'), source, re.UNICODE)
-                if m:
-                    # Build replacement string with options
-                    c = p.get('class')
-                    for i in range(1,10):
-                        if m.lastindex is not None and m.lastindex >= i and c.find('%'+str(i)) >= 0:
-                            value = m.group(i)
-                            if p.get('capitalize'):
-                                value = value[0:1].capitalize() + value[1:]
-                            c = c.replace('%'+str(i), value)
+                matches = re.finditer(p.get('pattern'), source, re.UNICODE)
+                if matches:
+                    for match in matches:
+                        # Build replacement string with options
+                        c = p.get('class')
 
-                    # Globally replace match in source
-                    source = source.replace(m.group(0), c)
+                        # Iterate through up to 10 capturing groups in the regex
+                        for i in range(1,10):
+                            if match.lastindex is not None and match.lastindex >= i and c.find('%'+str(i)) >= 0:
+                                value = match.group(i)
+                                if p.get('capitalize'):
+                                    value = value[0:1].capitalize() + value[1:]
+                                c = c.replace('%'+str(i), value)
+
+                        # Globally replace match in source
+                        source = source.replace(match.group(0), c)
             except Exception as e:
                 print(e)
                 print('SublimePHPIntel: Invalid pattern: ' + p.get('pattern'))
