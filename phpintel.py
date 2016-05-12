@@ -65,10 +65,20 @@ class GotoDeclarationCommand(sublime_plugin.TextCommand):
             for f in sublime.active_window().folders():
                 intel.load_index(f)
             if symbol in intel._index:
-                # Find class
-                # TODO Show a quicklist when there is more than one choice
-                path = intel._index[symbol].pop()
-                self.view.window().open_file(path, sublime.TRANSIENT)
+                self._symbol = symbol
+                self._symbol_files = intel._index[symbol]
+                panel_items = []
+                for file in self._symbol_files:
+                    for r in intel._roots:
+                        if file.startswith(r):
+                            file = file[len(r) + 1:]
+                    panel_items.append([file])
+
+                if len(panel_items) > 1:
+                    self.view.window().show_quick_panel(panel_items, self.on_file_select)
+                else:
+                    self.on_file_select(0)
+
             # elif symbol in intel._symbol_index:
             #     # Find other symbol
             #     # TODO Build an index (with line numbers) of all declared symbols to make this faster
@@ -87,6 +97,28 @@ class GotoDeclarationCommand(sublime_plugin.TextCommand):
                 sublime.status_message('Not found')
         else:
             sublime.status_message('Put cursor on some text first')
+
+    def on_file_select(self, selected_index):
+        if selected_index == -1:
+            return
+
+        self.view.window().open_file(self._symbol_files[selected_index])
+        view_index = self.view.window().get_view_index(self.view)[1]
+
+        self.jump_to_symbol(self.view.window().views()[view_index + 1], self._symbol)
+
+    def jump_to_symbol(self, view, symbol):
+        if view.is_loading():
+            def try_again():
+                self.jump_to_symbol(view, symbol)
+            sublime.set_timeout(try_again, 10)
+        else:
+            region = view.find("(class|interface)\s+" + symbol, 0)
+
+            view.sel().clear()
+            view.sel().add(sublime.Region(region.b - len(symbol)))
+
+            view.show_at_center(region.a)
 
 
 def expand_word(view, region):
@@ -113,14 +145,14 @@ class EventListener(sublime_plugin.EventListener):
     def complete(self, view):
         if _scan_thread:
             return
-            
+
         intel.reset()
-        
+
         data = []
         found = []
 
         point = view.sel()[0].a
-        
+
         if view.score_selector(point, 'source.php') == 0 or view.score_selector(point, 'string.quoted') > 0:
             return False
 
