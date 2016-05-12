@@ -64,8 +64,6 @@ capitalize: *true|false* — *Uppercase the first letter of the captured express
 
 ## Known issues
 
-I'm working on these issues:
-
 - Variable assignment is not detected (for example: <code>$var = CODE</code> where CODE returns an object.
 - Files are not removed from the index when they are deleted. For now, you'll need to rescan to remove them.
 - Files added to the project from outside of the editor are not added to the index. For now, you'll either need to open the file and save it or rescan the project.
